@@ -28,11 +28,31 @@ characters, not only white space. This entry is exactly 1 character.
 """
 
 import os
+import unicodedata
 
 # U+1F9ED COMPASS — the one glyph that stands for my agent.
 EMOJI = "\U0001F9ED"
 
 OUTPUT_PATH = "/output/entry.txt"
+
+# Unicode ranges where pictographic emoji live (miscellaneous symbols,
+# dingbats, emoticons, transport & map symbols, supplemental symbols).
+_EMOJI_RANGES = (
+    (0x2600, 0x27BF),
+    (0x1F000, 0x1FAFF),
+)
+
+
+def _is_single_emoji(text: str) -> bool:
+    """True when text is exactly one pictographic emoji glyph."""
+    if len(text) != 1:
+        return False
+    code_point = ord(text)
+    if text.isspace() or text.isalnum():
+        return False
+    if unicodedata.category(text).startswith("C"):
+        return False
+    return any(lo <= code_point <= hi for lo, hi in _EMOJI_RANGES)
 
 
 def main() -> None:
@@ -40,8 +60,9 @@ def main() -> None:
     assert isinstance(EMOJI, str)
     assert 1 <= len(EMOJI) <= 16, f"entry must be 1-16 chars, got {len(EMOJI)}"
     assert EMOJI.strip(), "entry must not be only white space"
-    # Exactly one glyph: a single Unicode code point.
-    assert len(EMOJI) == 1, "entry must be exactly one emoji"
+    # Exactly one glyph: a single Unicode code point, and it must
+    # actually be an emoji — not a letter, digit or punctuation mark.
+    assert _is_single_emoji(EMOJI), f"not a single emoji: {EMOJI!r}"
 
     encoded = EMOJI.encode("utf-8")
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
